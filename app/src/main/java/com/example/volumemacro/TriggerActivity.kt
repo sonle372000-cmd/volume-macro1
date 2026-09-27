@@ -1,11 +1,9 @@
 package com.example.volumemacro
 
 import android.app.Activity
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.provider.Settings
 import android.widget.Toast
 
 class TriggerActivity : Activity() {
@@ -13,23 +11,34 @@ class TriggerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        val service = MacroAccessibilityService.instance
-        if (service == null) {
-            Toast.makeText(
-                this,
-                "Chưa bật Dịch vụ Trợ năng cho Volume Macro. Vui lòng bật trước rồi thử lại.",
-                Toast.LENGTH_LONG
-            ).show()
-            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-            finish()
-            return
-        }
+        val prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
+        val x = prefs.getInt(MainActivity.KEY_X, 500)
+        val y = prefs.getInt(MainActivity.KEY_Y, 800)
 
         moveTaskToBack(true)
 
-        Handler(Looper.getMainLooper()).postDelayed({
-            service.performTapNow()
-            finish()
-        }, 200)
+        Thread {
+            val success = tapViaRoot(x, y)
+            if (!success) {
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(
+                        applicationContext,
+                        "Không chạm được: cần quyền ROOT nhưng không lấy được quyền root trên máy này.",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            Handler(Looper.getMainLooper()).post { finish() }
+        }.start()
+    }
+
+    private fun tapViaRoot(x: Int, y: Int): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "input tap $x $y"))
+            val exitCode = process.waitFor()
+            exitCode == 0
+        } catch (e: Exception) {
+            false
+        }
     }
 }
