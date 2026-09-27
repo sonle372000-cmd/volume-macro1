@@ -18,6 +18,19 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".TriggerActivity"
+            android:label="Chạm Macro"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <service
             android:name=".OverlayPickerService"
             android:exported="false" />
