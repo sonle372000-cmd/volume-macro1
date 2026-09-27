@@ -9,19 +9,20 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
 
-/**
- * Dịch vụ Trợ năng: bắt sự kiện phím Volume Down.
- * Nếu phím được GIỮ đủ lâu (holdMs, mặc định 500ms) thì thực hiện một cú chạm (tap)
- * tại tọa độ (x, y) đã lưu trong SharedPreferences.
- */
 class MacroAccessibilityService : AccessibilityService() {
 
     private val handler = Handler(Looper.getMainLooper())
     private var pendingTrigger: Runnable? = null
     private var isKeyDown = false
 
+    companion object {
+        var instance: MacroAccessibilityService? = null
+            private set
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
+        instance = this
         serviceInfo = AccessibilityServiceInfo().apply {
             eventTypes = AccessibilityEvent.TYPES_ALL_MASK
             feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC
@@ -30,9 +31,12 @@ class MacroAccessibilityService : AccessibilityService() {
         }
     }
 
-    override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        // Không cần xử lý sự kiện màn hình cho tính năng này.
+    override fun onDestroy() {
+        super.onDestroy()
+        if (instance === this) instance = null
     }
+
+    override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
 
     override fun onInterrupt() {}
 
@@ -48,7 +52,7 @@ class MacroAccessibilityService : AccessibilityService() {
             KeyEvent.ACTION_DOWN -> {
                 if (!isKeyDown) {
                     isKeyDown = true
-                    val runnable = Runnable { performTap() }
+                    val runnable = Runnable { performTapNow() }
                     pendingTrigger = runnable
                     handler.postDelayed(runnable, holdMs)
                 }
@@ -60,13 +64,10 @@ class MacroAccessibilityService : AccessibilityService() {
             }
         }
 
-        // Trả về true để CHẶN hành vi giảm âm lượng mặc định khi giữ phím.
-        // Nếu muốn âm lượng vẫn thay đổi bình thường, đổi dòng dưới thành:
-        // return super.onKeyEvent(event)
         return true
     }
 
-    private fun performTap() {
+    fun performTapNow() {
         val prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
         val x = prefs.getInt(MainActivity.KEY_X, 500).toFloat()
         val y = prefs.getInt(MainActivity.KEY_Y, 800).toFloat()
