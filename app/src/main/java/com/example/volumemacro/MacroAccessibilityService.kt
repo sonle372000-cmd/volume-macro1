@@ -4,10 +4,12 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.accessibilityservice.GestureDescription
 import android.graphics.Path
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.accessibility.AccessibilityEvent
+import android.widget.Toast
 
 class MacroAccessibilityService : AccessibilityService() {
 
@@ -69,12 +71,40 @@ class MacroAccessibilityService : AccessibilityService() {
 
     fun performTapNow() {
         val prefs = getSharedPreferences(MainActivity.PREFS_NAME, MODE_PRIVATE)
-        val x = prefs.getInt(MainActivity.KEY_X, 500).toFloat()
-        val y = prefs.getInt(MainActivity.KEY_Y, 800).toFloat()
+        val x = prefs.getInt(MainActivity.KEY_X, 500)
+        val y = prefs.getInt(MainActivity.KEY_Y, 800)
 
-        val path = Path().apply { moveTo(x, y) }
-        val stroke = GestureDescription.StrokeDescription(path, 0, 50)
-        val gesture = GestureDescription.Builder().addStroke(stroke).build()
-        dispatchGesture(gesture, null, null)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            val path = Path().apply { moveTo(x.toFloat(), y.toFloat()) }
+            val stroke = GestureDescription.StrokeDescription(path, 0, 50)
+            val gesture = GestureDescription.Builder().addStroke(stroke).build()
+            dispatchGesture(gesture, null, null)
+        } else {
+            tapViaRootOrWarn(x, y)
+        }
+    }
+
+    private fun tapViaRootOrWarn(x: Int, y: Int) {
+        Thread {
+            try {
+                val process = Runtime.getRuntime().exec(arrayOf("su", "-c", "input tap $x $y"))
+                val exitCode = process.waitFor()
+                if (exitCode != 0) {
+                    notifyNoRoot()
+                }
+            } catch (e: Exception) {
+                notifyNoRoot()
+            }
+        }.start()
+    }
+
+    private fun notifyNoRoot() {
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(
+                applicationContext,
+                "Máy đang chạy Android 6, cần quyền ROOT để giả lập chạm màn hình nhưng không lấy được quyền root.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
     }
 }
