@@ -1,4 +1,3 @@
 <resources>
     <string name="app_name">Volume Macro</string>
-    <string name="accessibility_service_description">Cho phép ứng dụng bắt sự kiện nút giảm âm lượng và tự động chạm vào một điểm trên màn hình khi bạn giữ nút.</string>
 </resources>
